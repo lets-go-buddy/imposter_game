@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Eye, EyeOff, Users, Timer, Sparkles, RotateCcw, Vote } from "lucide-react";
+import { Eye, EyeOff, Users, Timer, Sparkles, RotateCcw, Vote, ShieldAlert } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -22,6 +22,8 @@ export const Route = createFileRoute("/")({
 type Phase = "setup" | "reveal" | "discussion" | "voting" | "result";
 type Role = "citizen" | "imposter";
 
+const WORD_COUNT = 10;
+
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -33,8 +35,10 @@ function shuffle<T>(arr: T[]): T[] {
 
 function Game() {
   const [phase, setPhase] = useState<Phase>("setup");
-  const [citizenWord, setCitizenWord] = useState("");
-  const [imposterWord, setImposterWord] = useState("");
+  const [words, setWords] = useState<string[]>(Array(WORD_COUNT).fill(""));
+  const [wordPool, setWordPool] = useState<string[]>([]);
+  const [usedWords, setUsedWords] = useState<string[]>([]);
+  const [currentWord, setCurrentWord] = useState("");
   const [roles, setRoles] = useState<Role[]>([]);
   const [seen, setSeen] = useState<boolean[]>([false, false, false, false]);
   const [activePlayer, setActivePlayer] = useState<number | null>(null);
@@ -43,17 +47,39 @@ function Game() {
   const [votedIdx, setVotedIdx] = useState<number | null>(null);
 
   const startGame = () => {
-    if (!citizenWord.trim() || !imposterWord.trim()) return;
-    const r: Role[] = ["citizen", "citizen", "citizen", "imposter"];
-    setRoles(shuffle(r));
+    const cleaned = words.map((w) => w.trim()).filter(Boolean);
+    if (cleaned.length < WORD_COUNT) return;
+    const pool = shuffle(cleaned);
+    const chosen = pool[0];
+    setWordPool(pool);
+    setUsedWords([chosen]);
+    setCurrentWord(chosen);
+    setRoles(shuffle<Role>(["citizen", "citizen", "citizen", "imposter"]));
     setSeen([false, false, false, false]);
     setPhase("reveal");
   };
 
-  const reset = () => {
+  const nextRound = () => {
+    const remaining = wordPool.filter((w) => !usedWords.includes(w));
+    const pickFrom = remaining.length > 0 ? remaining : wordPool;
+    const chosen = pickFrom[Math.floor(Math.random() * pickFrom.length)];
+    setUsedWords((u) => (remaining.length > 0 ? [...u, chosen] : [chosen]));
+    setCurrentWord(chosen);
+    setRoles(shuffle<Role>(["citizen", "citizen", "citizen", "imposter"]));
+    setSeen([false, false, false, false]);
+    setActivePlayer(null);
+    setRevealed(false);
+    setTimeLeft(120);
+    setVotedIdx(null);
+    setPhase("reveal");
+  };
+
+  const fullReset = () => {
     setPhase("setup");
-    setCitizenWord("");
-    setImposterWord("");
+    setWords(Array(WORD_COUNT).fill(""));
+    setWordPool([]);
+    setUsedWords([]);
+    setCurrentWord("");
     setRoles([]);
     setSeen([false, false, false, false]);
     setActivePlayer(null);
@@ -62,15 +88,12 @@ function Game() {
     setVotedIdx(null);
   };
 
-  // Timer
   useEffect(() => {
-    if (phase !== "discussion") return;
-    if (timeLeft <= 0) return;
+    if (phase !== "discussion" || timeLeft <= 0) return;
     const t = setTimeout(() => setTimeLeft((s) => s - 1), 1000);
     return () => clearTimeout(t);
   }, [phase, timeLeft]);
 
-  // Auto-close reveal after 3s
   useEffect(() => {
     if (!revealed || activePlayer === null) return;
     const t = setTimeout(() => closeReveal(), 3000);
@@ -88,11 +111,6 @@ function Game() {
 
   const allSeen = seen.every(Boolean);
 
-  const vote = (idx: number) => {
-    setVotedIdx(idx);
-    setPhase("result");
-  };
-
   return (
     <main className="min-h-screen px-4 py-8 sm:py-12 flex flex-col items-center">
       <header className="mb-8 sm:mb-12 text-center">
@@ -106,13 +124,7 @@ function Game() {
 
       <div className="w-full max-w-2xl">
         {phase === "setup" && (
-          <SetupScreen
-            citizenWord={citizenWord}
-            imposterWord={imposterWord}
-            setCitizenWord={setCitizenWord}
-            setImposterWord={setImposterWord}
-            onStart={startGame}
-          />
+          <SetupScreen words={words} setWords={setWords} onStart={startGame} />
         )}
 
         {phase === "reveal" && (
@@ -135,28 +147,31 @@ function Game() {
           />
         )}
 
-        {phase === "voting" && <VotingScreen onVote={vote} />}
+        {phase === "voting" && <VotingScreen onVote={(i) => { setVotedIdx(i); setPhase("result"); }} />}
 
         {phase === "result" && votedIdx !== null && (
           <ResultScreen
             votedIdx={votedIdx}
             role={roles[votedIdx]}
-            onPlayAgain={reset}
+            word={currentWord}
+            roundsPlayed={usedWords.length}
+            totalWords={wordPool.length}
+            onNextRound={nextRound}
+            onFullReset={fullReset}
           />
         )}
       </div>
 
       <Dialog
         open={activePlayer !== null}
-        onOpenChange={(o) => {
-          if (!o) closeReveal();
-        }}
+        onOpenChange={(o) => { if (!o) closeReveal(); }}
       >
         <DialogContent className="sm:max-w-md border-primary/30 bg-card">
           {activePlayer !== null && (
             <RevealModal
               playerNum={activePlayer + 1}
-              word={roles[activePlayer] === "imposter" ? imposterWord : citizenWord}
+              role={roles[activePlayer]}
+              word={currentWord}
               revealed={revealed}
               onReveal={() => setRevealed(true)}
               onClose={closeReveal}
@@ -169,55 +184,61 @@ function Game() {
 }
 
 function SetupScreen(props: {
-  citizenWord: string;
-  imposterWord: string;
-  setCitizenWord: (s: string) => void;
-  setImposterWord: (s: string) => void;
+  words: string[];
+  setWords: (w: string[]) => void;
   onStart: () => void;
 }) {
-  const ready = props.citizenWord.trim() && props.imposterWord.trim();
+  const filled = props.words.filter((w) => w.trim()).length;
+  const ready = filled === WORD_COUNT;
   return (
     <Card className="p-6 sm:p-8 bg-card/80 backdrop-blur border-primary/20 animate-pop">
-      <div className="flex items-center gap-2 mb-6">
+      <div className="flex items-center gap-2 mb-2">
         <Sparkles className="h-5 w-5 text-primary" />
-        <h2 className="text-xl sm:text-2xl font-semibold">Game Setup</h2>
+        <h2 className="text-xl sm:text-2xl font-semibold">Add 10 secret words</h2>
       </div>
-      <div className="space-y-5">
-        <div className="space-y-2">
-          <Label htmlFor="citizen" className="text-primary text-glow-cyan">
-            Word for Citizens (3 players)
-          </Label>
-          <Input
-            id="citizen"
-            placeholder="e.g. Apple"
-            value={props.citizenWord}
-            onChange={(e) => props.setCitizenWord(e.target.value)}
-            className="bg-input/50 border-primary/30 focus-visible:ring-primary text-lg"
+      <p className="text-sm text-muted-foreground mb-6">
+        One word per round is picked at random — even you won't know which one!
+        The imposter gets <span className="text-accent font-semibold">no word at all</span>.
+      </p>
+
+      <div className="grid sm:grid-cols-2 gap-3 mb-5">
+        {props.words.map((w, i) => (
+          <div key={i} className="space-y-1.5">
+            <Label htmlFor={`w${i}`} className="text-xs text-muted-foreground">
+              Word {i + 1}
+            </Label>
+            <Input
+              id={`w${i}`}
+              placeholder={`e.g. ${["Apple","Beach","Cat","Drum","Eiffel Tower","Forest","Guitar","Hat","Ice","Jungle"][i]}`}
+              value={w}
+              onChange={(e) => {
+                const next = [...props.words];
+                next[i] = e.target.value;
+                props.setWords(next);
+              }}
+              className="bg-input/50 border-primary/30 focus-visible:ring-primary"
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between text-sm mb-4">
+        <span className="text-muted-foreground">{filled} / {WORD_COUNT} words</span>
+        <div className="h-1.5 flex-1 mx-4 bg-muted rounded-full overflow-hidden">
+          <div
+            className="h-full bg-gradient-primary transition-all"
+            style={{ width: `${(filled / WORD_COUNT) * 100}%` }}
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="imposter" className="text-accent text-glow-pink">
-            Word for the Imposter (1 player)
-          </Label>
-          <Input
-            id="imposter"
-            placeholder="e.g. Pear"
-            value={props.imposterWord}
-            onChange={(e) => props.setImposterWord(e.target.value)}
-            className="bg-input/50 border-accent/40 focus-visible:ring-accent text-lg"
-          />
-        </div>
-        <Button
-          onClick={props.onStart}
-          disabled={!ready}
-          className="w-full h-14 text-lg font-bold bg-gradient-primary text-primary-foreground hover:opacity-90 transition-opacity glow-cyan disabled:opacity-40 disabled:shadow-none"
-        >
-          Start Game
-        </Button>
-        <p className="text-xs text-muted-foreground text-center">
-          Roles are assigned randomly. Keep your word secret!
-        </p>
       </div>
+
+      <Button
+        onClick={props.onStart}
+        disabled={!ready}
+        className="w-full h-14 text-lg font-bold bg-gradient-primary text-primary-foreground hover:opacity-90 transition-opacity glow-cyan disabled:opacity-40 disabled:shadow-none"
+      >
+        Start Game
+      </Button>
     </Card>
   );
 }
@@ -235,7 +256,7 @@ function RevealScreen(props: {
           <Users className="h-6 w-6 text-primary" /> Pass the device
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Each player taps their card privately to see their word.
+          Each player taps their card privately.
         </p>
       </div>
       <div className="grid grid-cols-2 gap-4">
@@ -276,11 +297,13 @@ function RevealScreen(props: {
 
 function RevealModal(props: {
   playerNum: number;
+  role: Role;
   word: string;
   revealed: boolean;
   onReveal: () => void;
   onClose: () => void;
 }) {
+  const isImposter = props.role === "imposter";
   return (
     <>
       <DialogHeader>
@@ -289,8 +312,8 @@ function RevealModal(props: {
         </DialogTitle>
         <DialogDescription className="text-center">
           {props.revealed
-            ? "This is your secret word. Hide the screen when done."
-            : `Are you Player ${props.playerNum}? Tap to reveal your secret word.`}
+            ? "Memorise this and hide the screen."
+            : `Are you Player ${props.playerNum}? Tap to reveal.`}
         </DialogDescription>
       </DialogHeader>
       <div className="py-6 flex flex-col items-center gap-4">
@@ -303,11 +326,26 @@ function RevealModal(props: {
           </button>
         ) : (
           <div className="w-full animate-flip-in">
-            <div className="w-full min-h-32 rounded-xl border-2 border-primary bg-card flex items-center justify-center p-6 glow-cyan">
-              <span className="text-3xl sm:text-4xl font-black text-primary text-glow-cyan break-all text-center">
-                {props.word}
-              </span>
-            </div>
+            {isImposter ? (
+              <div className="w-full min-h-32 rounded-xl border-2 border-accent bg-card flex flex-col items-center justify-center p-6 glow-pink gap-2">
+                <ShieldAlert className="h-10 w-10 text-accent" />
+                <span className="text-3xl sm:text-4xl font-black text-accent text-glow-pink">
+                  You are the Imposter
+                </span>
+                <span className="text-xs text-muted-foreground text-center">
+                  You don't get a word. Bluff your way through!
+                </span>
+              </div>
+            ) : (
+              <div className="w-full min-h-32 rounded-xl border-2 border-primary bg-card flex flex-col items-center justify-center p-6 glow-cyan gap-2">
+                <span className="text-xs uppercase tracking-widest text-muted-foreground">
+                  Your secret word
+                </span>
+                <span className="text-3xl sm:text-4xl font-black text-primary text-glow-cyan break-all text-center">
+                  {props.word}
+                </span>
+              </div>
+            )}
             <Button
               onClick={props.onClose}
               className="w-full mt-4 bg-secondary hover:bg-secondary/80"
@@ -328,7 +366,7 @@ function DiscussionScreen(props: {
 }) {
   const mins = Math.floor(props.timeLeft / 60);
   const secs = props.timeLeft % 60;
-  const pct = (props.timeLeft / 120) * 100;
+  const pct = Math.min(100, (props.timeLeft / 120) * 100);
   const urgent = props.timeLeft <= 15;
   return (
     <Card className="p-6 sm:p-10 bg-card/80 backdrop-blur border-primary/20 animate-pop text-center">
@@ -348,24 +386,15 @@ function DiscussionScreen(props: {
       </div>
       <div className="w-full h-2 bg-muted rounded-full overflow-hidden mb-8">
         <div
-          className={`h-full transition-all duration-1000 ${
-            urgent ? "bg-destructive" : "bg-gradient-primary"
-          }`}
+          className={`h-full transition-all duration-1000 ${urgent ? "bg-destructive" : "bg-gradient-primary"}`}
           style={{ width: `${pct}%` }}
         />
       </div>
       <div className="flex flex-col sm:flex-row gap-3">
-        <Button
-          variant="outline"
-          onClick={props.onAddTime}
-          className="flex-1 border-primary/40"
-        >
+        <Button variant="outline" onClick={props.onAddTime} className="flex-1 border-primary/40">
           +30 seconds
         </Button>
-        <Button
-          onClick={props.onVote}
-          className="flex-1 h-12 bg-gradient-primary text-primary-foreground font-bold glow-pink"
-        >
+        <Button onClick={props.onVote} className="flex-1 h-12 bg-gradient-primary text-primary-foreground font-bold glow-pink">
           <Vote className="h-5 w-5 mr-2" /> Go to Vote
         </Button>
       </div>
@@ -380,27 +409,18 @@ function VotingScreen(props: { onVote: (i: number) => void }) {
         <h2 className="text-2xl font-semibold flex items-center justify-center gap-2">
           <Vote className="h-6 w-6 text-accent" /> Cast Your Vote
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Who is the imposter? Vote them out.
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">Who is the imposter?</p>
       </div>
       <div className="grid sm:grid-cols-2 gap-4">
         {[0, 1, 2, 3].map((i) => (
-          <Card
-            key={i}
-            className="p-5 bg-card border-accent/20 flex items-center justify-between hover:border-accent/60 transition-colors"
-          >
+          <Card key={i} className="p-5 bg-card border-accent/20 flex items-center justify-between hover:border-accent/60 transition-colors">
             <div className="flex items-center gap-3">
               <div className="h-12 w-12 rounded-full bg-gradient-primary flex items-center justify-center font-black text-primary-foreground">
                 {i + 1}
               </div>
               <span className="font-semibold text-lg">Player {i + 1}</span>
             </div>
-            <Button
-              onClick={() => props.onVote(i)}
-              variant="destructive"
-              className="font-bold"
-            >
+            <Button onClick={() => props.onVote(i)} variant="destructive" className="font-bold">
               Vote Out
             </Button>
           </Card>
@@ -413,7 +433,11 @@ function VotingScreen(props: { onVote: (i: number) => void }) {
 function ResultScreen(props: {
   votedIdx: number;
   role: Role;
-  onPlayAgain: () => void;
+  word: string;
+  roundsPlayed: number;
+  totalWords: number;
+  onNextRound: () => void;
+  onFullReset: () => void;
 }) {
   const wasImposter = props.role === "imposter";
   const winner = wasImposter ? "Citizens Win!" : "Imposter Wins!";
@@ -423,28 +447,30 @@ function ResultScreen(props: {
         wasImposter ? "border-primary glow-cyan" : "border-accent glow-pink"
       }`}
     >
-      <p className="text-sm uppercase tracking-widest text-muted-foreground mb-2">
-        The verdict
-      </p>
+      <p className="text-sm uppercase tracking-widest text-muted-foreground mb-2">The verdict</p>
       <h2 className="text-3xl sm:text-4xl font-black mb-4">
         Player {props.votedIdx + 1} was{" "}
         <span className={wasImposter ? "text-accent text-glow-pink" : "text-primary text-glow-cyan"}>
           {wasImposter ? "The Imposter" : "A Citizen"}!
         </span>
       </h2>
-      <div
-        className={`text-5xl sm:text-6xl font-black my-8 ${
-          wasImposter ? "text-primary text-glow-cyan" : "text-accent text-glow-pink"
-        }`}
-      >
+      <div className={`text-5xl sm:text-6xl font-black my-6 ${wasImposter ? "text-primary text-glow-cyan" : "text-accent text-glow-pink"}`}>
         {winner}
       </div>
-      <Button
-        onClick={props.onPlayAgain}
-        className="h-14 px-8 text-lg font-bold bg-gradient-primary text-primary-foreground glow-cyan"
-      >
-        <RotateCcw className="h-5 w-5 mr-2" /> Play Again
-      </Button>
+      <p className="text-muted-foreground mb-2">
+        The secret word was <span className="font-bold text-foreground">{props.word}</span>
+      </p>
+      <p className="text-xs text-muted-foreground mb-8">
+        Round {props.roundsPlayed} of {props.totalWords}
+      </p>
+      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+        <Button onClick={props.onNextRound} className="h-14 px-8 text-lg font-bold bg-gradient-primary text-primary-foreground glow-cyan">
+          <Sparkles className="h-5 w-5 mr-2" /> Next Round
+        </Button>
+        <Button onClick={props.onFullReset} variant="outline" className="h-14 px-8 text-lg font-bold border-primary/40">
+          <RotateCcw className="h-5 w-5 mr-2" /> New Words
+        </Button>
+      </div>
     </Card>
   );
 }
