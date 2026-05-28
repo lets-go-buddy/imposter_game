@@ -1,8 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Eye, EyeOff, Users, Timer, Sparkles, RotateCcw, Vote, ShieldAlert, Minus, Plus } from "lucide-react";
@@ -22,9 +20,36 @@ export const Route = createFileRoute("/")({
 type Phase = "setup" | "reveal" | "discussion" | "voting" | "result";
 type Role = "citizen" | "imposter";
 
-const WORD_COUNT = 10;
 const MIN_PLAYERS = 3;
 const MAX_PLAYERS = 8;
+
+const CATEGORIES = [
+  { name: "Prime NL Rap", emoji: "🎤", words: ["Broederliefde", "Typhoon", "Lil Kleine", "Ronnie Flex", "Boef", "Frenna", "Josylvio", "Sevn Alias", "Bizzey", "Lijpe"] },
+  { name: "Quarantaine Leven", emoji: "😷", words: ["TikTok", "Netflix", "Thuiswerken", "Mondkapje", "Lockdown", "Thuisbezorgd", "Vaccin", "Zoom", "Avondklok", "Zelftesten"] },
+  { name: "Fortnite", emoji: "🏆", words: ["Battle Royale", "V-Bucks", "Victory Royale", "Pickaxe", "Tilted Towers", "Emote", "Llama", "Zero Point", "Chapter", "Skin"] },
+  { name: "Memes", emoji: "😂", words: ["Harambe", "Doge", "Rick Roll", "Shrek", "Pepe the Frog", "OK Boomer", "Among Us", "Karen", "Distracted Boyfriend", "This Is Fine"] },
+  { name: "GTA V", emoji: "🚗", words: ["Los Santos", "Trevor", "Michael", "Franklin", "Heist", "Wanted Level", "Chop", "Mount Chiliad", "Blaine County", "Bugstar"] },
+  { name: "Minecraft", emoji: "⛏️", words: ["Creeper", "Steve", "Diamond", "Nether", "Ender Dragon", "Redstone", "Villager", "TNT", "Enderman", "Herobrine"] },
+  { name: "FIFA / EA FC", emoji: "⚽", words: ["FUT", "TOTY", "Pack Opening", "Weekend League", "Icon", "Chemistry", "SBC", "Career Mode", "TOTW", "Skill Moves"] },
+  { name: "Netflix Series", emoji: "📺", words: ["Squid Game", "Stranger Things", "Wednesday", "Ozark", "Money Heist", "Dark", "Black Mirror", "Tiger King", "Lupin", "Bridgerton"] },
+  { name: "TikTok", emoji: "📱", words: ["FYP", "Duet", "Viral Dance", "Renegade", "POV", "Stitch", "Trending Sound", "Shadowban", "Challenge", "Stitcher"] },
+  { name: "NL YouTubers", emoji: "🇳🇱", words: ["Enzo Knol", "StukTV", "Gianni", "Kwebbelkop", "Dylan Haegens", "Milan Knol", "Jasper", "LucasFilms", "Kees", "Bram Krikke"] },
+  { name: "Pokémon", emoji: "⚡", words: ["Pikachu", "Charizard", "Mewtwo", "Eevee", "Gengar", "Snorlax", "Bulbasaur", "Jigglypuff", "Lucario", "Umbreon"] },
+  { name: "Harry Potter", emoji: "🧙", words: ["Hogwarts", "Voldemort", "Dumbledore", "Quidditch", "Hermione", "Snape", "Dobby", "Patronus", "Horcrux", "Sorting Hat"] },
+  { name: "Marvel", emoji: "🦸", words: ["Iron Man", "Thor", "Spider-Man", "Thanos", "Black Widow", "Hulk", "Captain America", "Loki", "Groot", "Doctor Strange"] },
+  { name: "Voetbal", emoji: "🏟️", words: ["Messi", "Ronaldo", "Haaland", "Champions League", "Offside", "Penalty", "Ajax", "Oranje", "VAR", "Hat-trick"] },
+  { name: "McDonald's", emoji: "🍔", words: ["Big Mac", "McFlurry", "Happy Meal", "McNuggets", "Quarter Pounder", "Filet-O-Fish", "McChicken", "Fries", "Sundae", "McMuffin"] },
+  { name: "Schoolleven", emoji: "📚", words: ["Spreekbeurt", "Toets", "Schoolreisje", "Conciërge", "Huiswerk", "Rapport", "Stagedag", "Bijles", "Diploma", "Kantine"] },
+  { name: "Drake", emoji: "👑", words: ["God's Plan", "One Dance", "Hotline Bling", "Started From The Bottom", "Nice For What", "Toosie Slide", "Passionfruit", "Rich Flex", "Jimmy", "Certified Lover Boy"] },
+  { name: "Among Us", emoji: "🔴", words: ["Impostor", "Emergency Meeting", "Vent", "Sabotage", "Crewmate", "Sus", "Reactor", "Skeld", "Airship", "Vote Out"] },
+  { name: "Anime", emoji: "🍜", words: ["Naruto", "Dragon Ball", "One Piece", "Attack on Titan", "Death Note", "Demon Slayer", "Jujutsu Kaisen", "My Hero Academia", "Bleach", "Fullmetal Alchemist"] },
+  { name: "Roblox", emoji: "🎮", words: ["Robux", "Adopt Me", "Bloxburg", "Tower of Hell", "Jailbreak", "Avatar", "Obby", "Trading", "Brookhaven", "Arsenal"] },
+  { name: "Spelletjesavond", emoji: "🎲", words: ["Monopoly", "Yahtzee", "Uno", "Risk", "Trivial Pursuit", "Jenga", "Dobble", "Pictionary", "Stratego", "Cluedo"] },
+  { name: "Call of Duty", emoji: "🎯", words: ["Warzone", "Gulag", "Loadout", "Killstreak", "Ghost", "Operator", "Bunker", "Buy Station", "Nuke", "Camping"] },
+  { name: "Reality TV NL", emoji: "💅", words: ["Love Island", "Temptation Island", "Big Brother", "Expeditie Robinson", "The Voice", "Heel Holland Bakt", "SAS", "The Circle", "Boer zoekt Vrouw", "MasterChef"] },
+  { name: "Taylor Swift", emoji: "🩷", words: ["Shake It Off", "Blank Space", "Love Story", "Anti-Hero", "Bad Blood", "Fearless", "Eras Tour", "Swifties", "Speak Now", "Reputation"] },
+  { name: "Supermarkt NL", emoji: "🛒", words: ["Albert Heijn", "Jumbo", "Lidl", "Aldi", "Bonuskaart", "Kassabon", "Hamsteren", "Kassa", "Vers Brood", "Boodschappenlijst"] },
+] as const;
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -42,7 +67,7 @@ function makeRoles(count: number): Role[] {
 function Game() {
   const [phase, setPhase] = useState<Phase>("setup");
   const [playerCount, setPlayerCount] = useState(4);
-  const [words, setWords] = useState<string[]>(Array(WORD_COUNT).fill(""));
+  const [currentCategory, setCurrentCategory] = useState<string>("");
   const [wordPool, setWordPool] = useState<string[]>([]);
   const [usedWords, setUsedWords] = useState<string[]>([]);
   const [currentWord, setCurrentWord] = useState("");
@@ -53,11 +78,10 @@ function Game() {
   const [timeLeft, setTimeLeft] = useState(120);
   const [votedIdx, setVotedIdx] = useState<number | null>(null);
 
-  const startGame = () => {
-    const cleaned = words.map((w) => w.trim()).filter(Boolean);
-    if (cleaned.length < WORD_COUNT) return;
-    const pool = shuffle(cleaned);
+  const startGame = (categoryWords: readonly string[], categoryName: string) => {
+    const pool = shuffle([...categoryWords]);
     const chosen = pool[0];
+    setCurrentCategory(categoryName);
     setWordPool(pool);
     setUsedWords([chosen]);
     setCurrentWord(chosen);
@@ -83,7 +107,7 @@ function Game() {
 
   const fullReset = () => {
     setPhase("setup");
-    setWords(Array(WORD_COUNT).fill(""));
+    setCurrentCategory("");
     setWordPool([]);
     setUsedWords([]);
     setCurrentWord("");
@@ -132,8 +156,6 @@ function Game() {
       <div className="w-full max-w-2xl">
         {phase === "setup" && (
           <SetupScreen
-            words={words}
-            setWords={setWords}
             playerCount={playerCount}
             setPlayerCount={setPlayerCount}
             onStart={startGame}
@@ -167,6 +189,7 @@ function Game() {
             votedIdx={votedIdx}
             role={roles[votedIdx]}
             word={currentWord}
+            category={currentCategory}
             roundsPlayed={usedWords.length}
             totalWords={wordPool.length}
             onNextRound={nextRound}
@@ -197,88 +220,57 @@ function Game() {
 }
 
 function SetupScreen(props: {
-  words: string[];
-  setWords: (w: string[]) => void;
   playerCount: number;
   setPlayerCount: (n: number) => void;
-  onStart: () => void;
+  onStart: (words: readonly string[], name: string) => void;
 }) {
-  const filled = props.words.filter((w) => w.trim()).length;
-  const ready = filled === WORD_COUNT;
   return (
-    <Card className="p-6 sm:p-8 bg-card/80 backdrop-blur border-primary/20 animate-pop">
-      <div className="flex items-center gap-2 mb-2">
-        <Sparkles className="h-5 w-5 text-primary" />
-        <h2 className="text-xl sm:text-2xl font-semibold">Add 10 secret words</h2>
-      </div>
-      <p className="text-sm text-muted-foreground mb-6">
-        One word per round is picked at random — even you won't know which one!
-        The imposter gets <span className="text-accent font-semibold">no word at all</span>.
-      </p>
-
-      <div className="flex items-center justify-between mb-6 p-4 rounded-xl border border-primary/20 bg-muted/30">
-        <div className="flex items-center gap-2">
-          <Users className="h-5 w-5 text-primary" />
-          <span className="font-semibold">Number of players</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => props.setPlayerCount(Math.max(MIN_PLAYERS, props.playerCount - 1))}
-            disabled={props.playerCount <= MIN_PLAYERS}
-            className="h-8 w-8 rounded-full border border-primary/40 flex items-center justify-center hover:bg-primary/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-          >
-            <Minus className="h-4 w-4" />
-          </button>
-          <span className="text-2xl font-black text-primary w-6 text-center">{props.playerCount}</span>
-          <button
-            onClick={() => props.setPlayerCount(Math.min(MAX_PLAYERS, props.playerCount + 1))}
-            disabled={props.playerCount >= MAX_PLAYERS}
-            className="h-8 w-8 rounded-full border border-primary/40 flex items-center justify-center hover:bg-primary/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-
-      <div className="grid sm:grid-cols-2 gap-3 mb-5">
-        {props.words.map((w, i) => (
-          <div key={i} className="space-y-1.5">
-            <Label htmlFor={`w${i}`} className="text-xs text-muted-foreground">
-              Word {i + 1}
-            </Label>
-            <Input
-              id={`w${i}`}
-              placeholder={`e.g. ${["Apple","Beach","Cat","Drum","Eiffel Tower","Forest","Guitar","Hat","Ice","Jungle"][i]}`}
-              value={w}
-              onChange={(e) => {
-                const next = [...props.words];
-                next[i] = e.target.value;
-                props.setWords(next);
-              }}
-              className="bg-input/50 border-primary/30 focus-visible:ring-primary"
-            />
+    <div className="space-y-6 animate-pop">
+      <Card className="p-4 bg-card/80 backdrop-blur border-primary/20">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Users className="h-5 w-5 text-primary" />
+            <span className="font-semibold">Aantal spelers</span>
           </div>
-        ))}
-      </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => props.setPlayerCount(Math.max(MIN_PLAYERS, props.playerCount - 1))}
+              disabled={props.playerCount <= MIN_PLAYERS}
+              className="h-8 w-8 rounded-full border border-primary/40 flex items-center justify-center active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-transform"
+            >
+              <Minus className="h-4 w-4" />
+            </button>
+            <span className="text-2xl font-black text-primary w-6 text-center">{props.playerCount}</span>
+            <button
+              onClick={() => props.setPlayerCount(Math.min(MAX_PLAYERS, props.playerCount + 1))}
+              disabled={props.playerCount >= MAX_PLAYERS}
+              className="h-8 w-8 rounded-full border border-primary/40 flex items-center justify-center active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-transform"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </Card>
 
-      <div className="flex items-center justify-between text-sm mb-4">
-        <span className="text-muted-foreground">{filled} / {WORD_COUNT} words</span>
-        <div className="h-1.5 flex-1 mx-4 bg-muted rounded-full overflow-hidden">
-          <div
-            className="h-full bg-gradient-primary transition-all"
-            style={{ width: `${(filled / WORD_COUNT) * 100}%` }}
-          />
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <Sparkles className="h-5 w-5 text-primary" />
+          <h2 className="text-xl font-semibold">Kies een categorie</h2>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat.name}
+              onClick={() => props.onStart(cat.words, cat.name)}
+              className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl border-2 border-primary/20 bg-card/70 backdrop-blur active:scale-95 active:border-primary transition-all text-center"
+            >
+              <span className="text-2xl">{cat.emoji}</span>
+              <span className="text-xs sm:text-sm font-semibold leading-tight">{cat.name}</span>
+            </button>
+          ))}
         </div>
       </div>
-
-      <Button
-        onClick={props.onStart}
-        disabled={!ready}
-        className="w-full h-14 text-lg font-bold bg-gradient-primary text-primary-foreground hover:opacity-90 transition-opacity glow-cyan disabled:opacity-40 disabled:shadow-none"
-      >
-        Start Game
-      </Button>
-    </Card>
+    </div>
   );
 }
 
@@ -359,7 +351,7 @@ function RevealModal(props: {
         {!props.revealed ? (
           <button
             onClick={props.onReveal}
-            className="w-full h-32 rounded-xl bg-gradient-primary text-primary-foreground font-bold text-xl glow-cyan hover:scale-[1.02] transition-transform"
+            className="w-full h-32 rounded-xl bg-gradient-primary text-primary-foreground font-bold text-xl glow-cyan active:scale-[0.98] transition-transform"
           >
             👁  Tap to Reveal
           </button>
@@ -473,6 +465,7 @@ function ResultScreen(props: {
   votedIdx: number;
   role: Role;
   word: string;
+  category: string;
   roundsPlayed: number;
   totalWords: number;
   onNextRound: () => void;
@@ -496,18 +489,18 @@ function ResultScreen(props: {
       <div className={`text-5xl sm:text-6xl font-black my-6 ${wasImposter ? "text-primary text-glow-cyan" : "text-accent text-glow-pink"}`}>
         {winner}
       </div>
-      <p className="text-muted-foreground mb-2">
+      <p className="text-muted-foreground mb-1">
         The secret word was <span className="font-bold text-foreground">{props.word}</span>
       </p>
       <p className="text-xs text-muted-foreground mb-8">
-        Round {props.roundsPlayed} of {props.totalWords}
+        {props.category} · Round {props.roundsPlayed} of {props.totalWords}
       </p>
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         <Button onClick={props.onNextRound} className="h-14 px-8 text-lg font-bold bg-gradient-primary text-primary-foreground glow-cyan">
           <Sparkles className="h-5 w-5 mr-2" /> Next Round
         </Button>
         <Button onClick={props.onFullReset} variant="outline" className="h-14 px-8 text-lg font-bold border-primary/40">
-          <RotateCcw className="h-5 w-5 mr-2" /> New Words
+          <RotateCcw className="h-5 w-5 mr-2" /> Andere categorie
         </Button>
       </div>
     </Card>
