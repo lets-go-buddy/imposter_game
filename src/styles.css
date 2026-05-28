@@ -108,9 +108,19 @@
 
   body {
     background: var(--gradient-bg);
-    background-attachment: fixed;
+    background-attachment: scroll;
     color: var(--color-foreground);
     min-height: 100vh;
+  }
+
+  /* Prevent 300ms tap delay on mobile */
+  button, a, [role="button"] {
+    touch-action: manipulation;
+  }
+
+  /* Prevent iOS font zoom on inputs */
+  input, select, textarea {
+    font-size: max(16px, 1em);
   }
 }
 

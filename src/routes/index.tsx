@@ -304,10 +304,10 @@ function RevealScreen(props: {
             key={i}
             onClick={() => !props.seen[i] && props.onPick(i)}
             disabled={props.seen[i]}
-            className={`group relative aspect-square rounded-2xl border-2 p-4 flex flex-col items-center justify-center transition-all ${
+            className={`group relative min-h-[110px] rounded-2xl border-2 p-4 flex flex-col items-center justify-center transition-all ${
               props.seen[i]
                 ? "border-primary/30 bg-muted/40 cursor-not-allowed"
-                : "border-primary/40 bg-card hover:border-primary hover:-translate-y-1 hover:glow-cyan"
+                : "border-primary/40 bg-card active:scale-[0.97] sm:hover:border-primary sm:hover:glow-cyan"
             }`}
           >
             {props.seen[i] ? (
@@ -368,7 +368,7 @@ function RevealModal(props: {
             {isImposter ? (
               <div className="w-full min-h-32 rounded-xl border-2 border-accent bg-card flex flex-col items-center justify-center p-6 glow-pink gap-2">
                 <ShieldAlert className="h-10 w-10 text-accent" />
-                <span className="text-3xl sm:text-4xl font-black text-accent text-glow-pink">
+                <span className="text-2xl sm:text-4xl font-black text-accent text-glow-pink text-center">
                   You are the Imposter
                 </span>
                 <span className="text-xs text-muted-foreground text-center">
@@ -417,7 +417,7 @@ function DiscussionScreen(props: {
         Describe your word without saying it. Find the imposter!
       </p>
       <div
-        className={`text-7xl sm:text-8xl font-black tabular-nums my-6 ${
+        className={`text-6xl sm:text-8xl font-black tabular-nums my-6 ${
           urgent ? "text-destructive animate-pulse" : "text-primary text-glow-cyan"
         }`}
       >
