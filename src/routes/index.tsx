@@ -5,15 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Eye, EyeOff, Users, Timer, Sparkles, RotateCcw, Vote, ShieldAlert } from "lucide-react";
+import { Eye, EyeOff, Users, Timer, Sparkles, RotateCcw, Vote, ShieldAlert, Minus, Plus } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Imposter — Pass & Play Party Game" },
-      { name: "description", content: "A 4-player local pass-and-play imposter party game. Find who got the secret word!" },
+      { name: "description", content: "A local pass-and-play imposter party game. Find who got the secret word!" },
       { property: "og:title", content: "Imposter — Pass & Play Party Game" },
-      { property: "og:description", content: "A 4-player local pass-and-play imposter party game." },
+      { property: "og:description", content: "A local pass-and-play imposter party game." },
     ],
   }),
   component: Game,
@@ -23,6 +23,8 @@ type Phase = "setup" | "reveal" | "discussion" | "voting" | "result";
 type Role = "citizen" | "imposter";
 
 const WORD_COUNT = 10;
+const MIN_PLAYERS = 3;
+const MAX_PLAYERS = 8;
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -33,14 +35,19 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+function makeRoles(count: number): Role[] {
+  return shuffle<Role>([...Array(count - 1).fill("citizen"), "imposter"]);
+}
+
 function Game() {
   const [phase, setPhase] = useState<Phase>("setup");
+  const [playerCount, setPlayerCount] = useState(4);
   const [words, setWords] = useState<string[]>(Array(WORD_COUNT).fill(""));
   const [wordPool, setWordPool] = useState<string[]>([]);
   const [usedWords, setUsedWords] = useState<string[]>([]);
   const [currentWord, setCurrentWord] = useState("");
   const [roles, setRoles] = useState<Role[]>([]);
-  const [seen, setSeen] = useState<boolean[]>([false, false, false, false]);
+  const [seen, setSeen] = useState<boolean[]>(Array(4).fill(false));
   const [activePlayer, setActivePlayer] = useState<number | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [timeLeft, setTimeLeft] = useState(120);
@@ -54,8 +61,8 @@ function Game() {
     setWordPool(pool);
     setUsedWords([chosen]);
     setCurrentWord(chosen);
-    setRoles(shuffle<Role>(["citizen", "citizen", "citizen", "imposter"]));
-    setSeen([false, false, false, false]);
+    setRoles(makeRoles(playerCount));
+    setSeen(Array(playerCount).fill(false));
     setPhase("reveal");
   };
 
@@ -65,8 +72,8 @@ function Game() {
     const chosen = pickFrom[Math.floor(Math.random() * pickFrom.length)];
     setUsedWords((u) => (remaining.length > 0 ? [...u, chosen] : [chosen]));
     setCurrentWord(chosen);
-    setRoles(shuffle<Role>(["citizen", "citizen", "citizen", "imposter"]));
-    setSeen([false, false, false, false]);
+    setRoles(makeRoles(playerCount));
+    setSeen(Array(playerCount).fill(false));
     setActivePlayer(null);
     setRevealed(false);
     setTimeLeft(120);
@@ -81,7 +88,7 @@ function Game() {
     setUsedWords([]);
     setCurrentWord("");
     setRoles([]);
-    setSeen([false, false, false, false]);
+    setSeen(Array(playerCount).fill(false));
     setActivePlayer(null);
     setRevealed(false);
     setTimeLeft(120);
@@ -118,13 +125,19 @@ function Game() {
           IMPOSTER
         </h1>
         <p className="mt-2 text-sm sm:text-base text-muted-foreground">
-          Pass-and-play · 4 players · Find the spy
+          Pass-and-play · {playerCount} players · Find the spy
         </p>
       </header>
 
       <div className="w-full max-w-2xl">
         {phase === "setup" && (
-          <SetupScreen words={words} setWords={setWords} onStart={startGame} />
+          <SetupScreen
+            words={words}
+            setWords={setWords}
+            playerCount={playerCount}
+            setPlayerCount={setPlayerCount}
+            onStart={startGame}
+          />
         )}
 
         {phase === "reveal" && (
@@ -147,7 +160,7 @@ function Game() {
           />
         )}
 
-        {phase === "voting" && <VotingScreen onVote={(i) => { setVotedIdx(i); setPhase("result"); }} />}
+        {phase === "voting" && <VotingScreen playerCount={playerCount} onVote={(i) => { setVotedIdx(i); setPhase("result"); }} />}
 
         {phase === "result" && votedIdx !== null && (
           <ResultScreen
@@ -186,6 +199,8 @@ function Game() {
 function SetupScreen(props: {
   words: string[];
   setWords: (w: string[]) => void;
+  playerCount: number;
+  setPlayerCount: (n: number) => void;
   onStart: () => void;
 }) {
   const filled = props.words.filter((w) => w.trim()).length;
@@ -200,6 +215,30 @@ function SetupScreen(props: {
         One word per round is picked at random — even you won't know which one!
         The imposter gets <span className="text-accent font-semibold">no word at all</span>.
       </p>
+
+      <div className="flex items-center justify-between mb-6 p-4 rounded-xl border border-primary/20 bg-muted/30">
+        <div className="flex items-center gap-2">
+          <Users className="h-5 w-5 text-primary" />
+          <span className="font-semibold">Number of players</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => props.setPlayerCount(Math.max(MIN_PLAYERS, props.playerCount - 1))}
+            disabled={props.playerCount <= MIN_PLAYERS}
+            className="h-8 w-8 rounded-full border border-primary/40 flex items-center justify-center hover:bg-primary/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+          <span className="text-2xl font-black text-primary w-6 text-center">{props.playerCount}</span>
+          <button
+            onClick={() => props.setPlayerCount(Math.min(MAX_PLAYERS, props.playerCount + 1))}
+            disabled={props.playerCount >= MAX_PLAYERS}
+            className="h-8 w-8 rounded-full border border-primary/40 flex items-center justify-center hover:bg-primary/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
 
       <div className="grid sm:grid-cols-2 gap-3 mb-5">
         {props.words.map((w, i) => (
@@ -260,7 +299,7 @@ function RevealScreen(props: {
         </p>
       </div>
       <div className="grid grid-cols-2 gap-4">
-        {[0, 1, 2, 3].map((i) => (
+        {props.seen.map((_, i) => (
           <button
             key={i}
             onClick={() => !props.seen[i] && props.onPick(i)}
@@ -402,7 +441,7 @@ function DiscussionScreen(props: {
   );
 }
 
-function VotingScreen(props: { onVote: (i: number) => void }) {
+function VotingScreen(props: { playerCount: number; onVote: (i: number) => void }) {
   return (
     <div className="space-y-6 animate-pop">
       <div className="text-center">
@@ -412,7 +451,7 @@ function VotingScreen(props: { onVote: (i: number) => void }) {
         <p className="text-sm text-muted-foreground mt-1">Who is the imposter?</p>
       </div>
       <div className="grid sm:grid-cols-2 gap-4">
-        {[0, 1, 2, 3].map((i) => (
+        {Array.from({ length: props.playerCount }, (_, i) => (
           <Card key={i} className="p-5 bg-card border-accent/20 flex items-center justify-between hover:border-accent/60 transition-colors">
             <div className="flex items-center gap-3">
               <div className="h-12 w-12 rounded-full bg-gradient-primary flex items-center justify-center font-black text-primary-foreground">
