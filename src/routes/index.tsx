@@ -119,7 +119,7 @@ function Game() {
   const allSeen = seen.every(Boolean);
 
   return (
-    <main className="min-h-screen px-4 py-8 sm:py-12 flex flex-col items-center">
+    <main className="min-h-screen px-4 py-8 sm:py-12 flex flex-col items-center bg-black/50 backdrop-blur-[2px]">
       <header className="mb-8 sm:mb-12 text-center">
         <h1 className="text-4xl sm:text-6xl font-black tracking-tight bg-gradient-primary bg-clip-text text-transparent">
           IMPOSTER

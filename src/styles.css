@@ -107,8 +107,11 @@
   }
 
   body {
-    background: var(--gradient-bg);
+    background-image: url('/bg.png');
+    background-size: cover;
+    background-position: center;
     background-attachment: scroll;
+    background-repeat: no-repeat;
     color: var(--color-foreground);
     min-height: 100vh;
   }
