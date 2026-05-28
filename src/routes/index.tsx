@@ -23,33 +23,33 @@ type Role = "citizen" | "imposter";
 const MIN_PLAYERS = 3;
 const MAX_PLAYERS = 8;
 
-const CATEGORIES = [
-  { name: "Prime NL Rap", emoji: "🎤", words: ["Broederliefde", "Typhoon", "Lil Kleine", "Ronnie Flex", "Boef", "Frenna", "Josylvio", "Sevn Alias", "Bizzey", "Lijpe"] },
-  { name: "Quarantaine Leven", emoji: "😷", words: ["TikTok", "Netflix", "Thuiswerken", "Mondkapje", "Lockdown", "Thuisbezorgd", "Vaccin", "Zoom", "Avondklok", "Zelftesten"] },
-  { name: "Fortnite", emoji: "🏆", words: ["Battle Royale", "V-Bucks", "Victory Royale", "Pickaxe", "Tilted Towers", "Emote", "Llama", "Zero Point", "Chapter", "Skin"] },
-  { name: "Memes", emoji: "😂", words: ["Harambe", "Doge", "Rick Roll", "Shrek", "Pepe the Frog", "OK Boomer", "Among Us", "Karen", "Distracted Boyfriend", "This Is Fine"] },
-  { name: "GTA V", emoji: "🚗", words: ["Los Santos", "Trevor", "Michael", "Franklin", "Heist", "Wanted Level", "Chop", "Mount Chiliad", "Blaine County", "Bugstar"] },
-  { name: "Minecraft", emoji: "⛏️", words: ["Creeper", "Steve", "Diamond", "Nether", "Ender Dragon", "Redstone", "Villager", "TNT", "Enderman", "Herobrine"] },
-  { name: "FIFA / EA FC", emoji: "⚽", words: ["FUT", "TOTY", "Pack Opening", "Weekend League", "Icon", "Chemistry", "SBC", "Career Mode", "TOTW", "Skill Moves"] },
-  { name: "Netflix Series", emoji: "📺", words: ["Squid Game", "Stranger Things", "Wednesday", "Ozark", "Money Heist", "Dark", "Black Mirror", "Tiger King", "Lupin", "Bridgerton"] },
-  { name: "TikTok", emoji: "📱", words: ["FYP", "Duet", "Viral Dance", "Renegade", "POV", "Stitch", "Trending Sound", "Shadowban", "Challenge", "Stitcher"] },
-  { name: "NL YouTubers", emoji: "🇳🇱", words: ["Enzo Knol", "StukTV", "Gianni", "Kwebbelkop", "Dylan Haegens", "Milan Knol", "Jasper", "LucasFilms", "Kees", "Bram Krikke"] },
-  { name: "Pokémon", emoji: "⚡", words: ["Pikachu", "Charizard", "Mewtwo", "Eevee", "Gengar", "Snorlax", "Bulbasaur", "Jigglypuff", "Lucario", "Umbreon"] },
-  { name: "Harry Potter", emoji: "🧙", words: ["Hogwarts", "Voldemort", "Dumbledore", "Quidditch", "Hermione", "Snape", "Dobby", "Patronus", "Horcrux", "Sorting Hat"] },
-  { name: "Marvel", emoji: "🦸", words: ["Iron Man", "Thor", "Spider-Man", "Thanos", "Black Widow", "Hulk", "Captain America", "Loki", "Groot", "Doctor Strange"] },
-  { name: "Voetbal", emoji: "🏟️", words: ["Messi", "Ronaldo", "Haaland", "Champions League", "Offside", "Penalty", "Ajax", "Oranje", "VAR", "Hat-trick"] },
-  { name: "McDonald's", emoji: "🍔", words: ["Big Mac", "McFlurry", "Happy Meal", "McNuggets", "Quarter Pounder", "Filet-O-Fish", "McChicken", "Fries", "Sundae", "McMuffin"] },
-  { name: "Schoolleven", emoji: "📚", words: ["Spreekbeurt", "Toets", "Schoolreisje", "Conciërge", "Huiswerk", "Rapport", "Stagedag", "Bijles", "Diploma", "Kantine"] },
-  { name: "Drake", emoji: "👑", words: ["God's Plan", "One Dance", "Hotline Bling", "Started From The Bottom", "Nice For What", "Toosie Slide", "Passionfruit", "Rich Flex", "Jimmy", "Certified Lover Boy"] },
-  { name: "Among Us", emoji: "🔴", words: ["Impostor", "Emergency Meeting", "Vent", "Sabotage", "Crewmate", "Sus", "Reactor", "Skeld", "Airship", "Vote Out"] },
-  { name: "Anime", emoji: "🍜", words: ["Naruto", "Dragon Ball", "One Piece", "Attack on Titan", "Death Note", "Demon Slayer", "Jujutsu Kaisen", "My Hero Academia", "Bleach", "Fullmetal Alchemist"] },
-  { name: "Roblox", emoji: "🎮", words: ["Robux", "Adopt Me", "Bloxburg", "Tower of Hell", "Jailbreak", "Avatar", "Obby", "Trading", "Brookhaven", "Arsenal"] },
-  { name: "Spelletjesavond", emoji: "🎲", words: ["Monopoly", "Yahtzee", "Uno", "Risk", "Trivial Pursuit", "Jenga", "Dobble", "Pictionary", "Stratego", "Cluedo"] },
-  { name: "Call of Duty", emoji: "🎯", words: ["Warzone", "Gulag", "Loadout", "Killstreak", "Ghost", "Operator", "Bunker", "Buy Station", "Nuke", "Camping"] },
-  { name: "Reality TV NL", emoji: "💅", words: ["Love Island", "Temptation Island", "Big Brother", "Expeditie Robinson", "The Voice", "Heel Holland Bakt", "SAS", "The Circle", "Boer zoekt Vrouw", "MasterChef"] },
-  { name: "Taylor Swift", emoji: "🩷", words: ["Shake It Off", "Blank Space", "Love Story", "Anti-Hero", "Bad Blood", "Fearless", "Eras Tour", "Swifties", "Speak Now", "Reputation"] },
-  { name: "Supermarkt NL", emoji: "🛒", words: ["Albert Heijn", "Jumbo", "Lidl", "Aldi", "Bonuskaart", "Kassabon", "Hamsteren", "Kassa", "Vers Brood", "Boodschappenlijst"] },
-] as const;
+const WORDS = [
+  "Prime NL rap",
+  "Prime quarantaine muziek",
+  "Meme muziek",
+  "White girl music",
+  "Festival muziek",
+  "Gym bro muziek",
+  "Sad boy muziek",
+  "TikTok dansen muziek",
+  "Autorijden muziek",
+  "Afro party muziek",
+  "Bruiloft muziek",
+  "Supermarkt achtergrondmuziek",
+  "Mama's favoriete muziek",
+  "Huisfeest muziek",
+  "Straat muziek",
+  "Voetbalstadion muziek",
+  "Vakantie muziek",
+  "Gaming muziek",
+  "Hardstyle",
+  "Kroeg muziek",
+  "Nachtclub muziek",
+  "Trap muziek",
+  "Telenovela muziek",
+  "Douchezingen muziek",
+  "School disco muziek",
+];
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -78,10 +78,10 @@ function Game() {
   const [timeLeft, setTimeLeft] = useState(120);
   const [votedIdx, setVotedIdx] = useState<number | null>(null);
 
-  const startGame = (categoryWords: readonly string[], categoryName: string) => {
-    const pool = shuffle([...categoryWords]);
+  const startGame = () => {
+    const pool = shuffle([...WORDS]);
     const chosen = pool[0];
-    setCurrentCategory(categoryName);
+    setCurrentCategory("");
     setWordPool(pool);
     setUsedWords([chosen]);
     setCurrentWord(chosen);
@@ -162,6 +162,7 @@ function Game() {
           />
         )}
 
+
         {phase === "reveal" && (
           <RevealScreen
             seen={seen}
@@ -222,55 +223,46 @@ function Game() {
 function SetupScreen(props: {
   playerCount: number;
   setPlayerCount: (n: number) => void;
-  onStart: (words: readonly string[], name: string) => void;
+  onStart: () => void;
 }) {
   return (
-    <div className="space-y-6 animate-pop">
-      <Card className="p-4 bg-card/80 backdrop-blur border-primary/20">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" />
-            <span className="font-semibold">Aantal spelers</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => props.setPlayerCount(Math.max(MIN_PLAYERS, props.playerCount - 1))}
-              disabled={props.playerCount <= MIN_PLAYERS}
-              className="h-8 w-8 rounded-full border border-primary/40 flex items-center justify-center active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-transform"
-            >
-              <Minus className="h-4 w-4" />
-            </button>
-            <span className="text-2xl font-black text-primary w-6 text-center">{props.playerCount}</span>
-            <button
-              onClick={() => props.setPlayerCount(Math.min(MAX_PLAYERS, props.playerCount + 1))}
-              disabled={props.playerCount >= MAX_PLAYERS}
-              className="h-8 w-8 rounded-full border border-primary/40 flex items-center justify-center active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-transform"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </Card>
+    <Card className="p-6 sm:p-8 bg-card/80 backdrop-blur border-primary/20 animate-pop space-y-8">
+      <div className="flex items-center gap-2">
+        <Sparkles className="h-5 w-5 text-primary" />
+        <h2 className="text-xl sm:text-2xl font-semibold">Imposter</h2>
+      </div>
 
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <Sparkles className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold">Kies een categorie</h2>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Users className="h-5 w-5 text-primary" />
+          <span className="font-semibold text-lg">Aantal spelers</span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.name}
-              onClick={() => props.onStart(cat.words, cat.name)}
-              className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl border-2 border-primary/20 bg-card/70 backdrop-blur active:scale-95 active:border-primary transition-all text-center"
-            >
-              <span className="text-2xl">{cat.emoji}</span>
-              <span className="text-xs sm:text-sm font-semibold leading-tight">{cat.name}</span>
-            </button>
-          ))}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => props.setPlayerCount(Math.max(MIN_PLAYERS, props.playerCount - 1))}
+            disabled={props.playerCount <= MIN_PLAYERS}
+            className="h-10 w-10 rounded-full border-2 border-primary/40 flex items-center justify-center active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-transform"
+          >
+            <Minus className="h-5 w-5" />
+          </button>
+          <span className="text-4xl font-black text-primary w-8 text-center">{props.playerCount}</span>
+          <button
+            onClick={() => props.setPlayerCount(Math.min(MAX_PLAYERS, props.playerCount + 1))}
+            disabled={props.playerCount >= MAX_PLAYERS}
+            className="h-10 w-10 rounded-full border-2 border-primary/40 flex items-center justify-center active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-transform"
+          >
+            <Plus className="h-5 w-5" />
+          </button>
         </div>
       </div>
-    </div>
+
+      <Button
+        onClick={props.onStart}
+        className="w-full h-14 text-lg font-bold bg-gradient-primary text-primary-foreground hover:opacity-90 transition-opacity glow-cyan"
+      >
+        Start Spel
+      </Button>
+    </Card>
   );
 }
 
