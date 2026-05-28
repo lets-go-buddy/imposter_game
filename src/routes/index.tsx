@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Eye, EyeOff, Users, Timer, Sparkles, RotateCcw, Vote, ShieldAlert, Minus, Plus } from "lucide-react";
+import { Eye, EyeOff, Users, Sparkles, RotateCcw, Vote, ShieldAlert, Minus, Plus } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/")({
   component: Game,
 });
 
-type Phase = "setup" | "reveal" | "discussion" | "voting" | "result";
+type Phase = "setup" | "reveal" | "voting" | "result";
 type Role = "citizen" | "imposter";
 
 const MIN_PLAYERS = 3;
@@ -67,7 +68,7 @@ function makeRoles(count: number): Role[] {
 function Game() {
   const [phase, setPhase] = useState<Phase>("setup");
   const [playerCount, setPlayerCount] = useState(4);
-  const [currentCategory, setCurrentCategory] = useState<string>("");
+  const [playerNames, setPlayerNames] = useState<string[]>(["", "", "", ""]);
   const [wordPool, setWordPool] = useState<string[]>([]);
   const [usedWords, setUsedWords] = useState<string[]>([]);
   const [currentWord, setCurrentWord] = useState("");
@@ -75,13 +76,22 @@ function Game() {
   const [seen, setSeen] = useState<boolean[]>(Array(4).fill(false));
   const [activePlayer, setActivePlayer] = useState<number | null>(null);
   const [revealed, setRevealed] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(120);
   const [votedIdx, setVotedIdx] = useState<number | null>(null);
+
+  const updatePlayerCount = (n: number) => {
+    setPlayerCount(n);
+    setPlayerNames((prev) => {
+      const next = [...prev];
+      while (next.length < n) next.push("");
+      return next.slice(0, n);
+    });
+  };
+
+  const getName = (i: number) => playerNames[i]?.trim() || `Speler ${i + 1}`;
 
   const startGame = () => {
     const pool = shuffle([...WORDS]);
     const chosen = pool[0];
-    setCurrentCategory("");
     setWordPool(pool);
     setUsedWords([chosen]);
     setCurrentWord(chosen);
@@ -100,14 +110,12 @@ function Game() {
     setSeen(Array(playerCount).fill(false));
     setActivePlayer(null);
     setRevealed(false);
-    setTimeLeft(120);
     setVotedIdx(null);
     setPhase("reveal");
   };
 
   const fullReset = () => {
     setPhase("setup");
-    setCurrentCategory("");
     setWordPool([]);
     setUsedWords([]);
     setCurrentWord("");
@@ -115,21 +123,12 @@ function Game() {
     setSeen(Array(playerCount).fill(false));
     setActivePlayer(null);
     setRevealed(false);
-    setTimeLeft(120);
     setVotedIdx(null);
   };
 
   useEffect(() => {
-    if (phase !== "discussion" || timeLeft <= 0) return;
-    const t = setTimeout(() => setTimeLeft((s) => s - 1), 1000);
-    return () => clearTimeout(t);
-  }, [phase, timeLeft]);
-
-  useEffect(() => {
     if (!revealed || activePlayer === null) return;
-    const t = setTimeout(() => closeReveal(), 3000);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // no auto-close
   }, [revealed, activePlayer]);
 
   const closeReveal = () => {
@@ -149,7 +148,7 @@ function Game() {
           IMPOSTER
         </h1>
         <p className="mt-2 text-sm sm:text-base text-muted-foreground">
-          Pass-and-play · {playerCount} players · Find the spy
+          Pass-and-play · {playerCount} spelers · Vind de spy
         </p>
       </header>
 
@@ -157,40 +156,38 @@ function Game() {
         {phase === "setup" && (
           <SetupScreen
             playerCount={playerCount}
-            setPlayerCount={setPlayerCount}
+            setPlayerCount={updatePlayerCount}
+            playerNames={playerNames}
+            setPlayerNames={setPlayerNames}
             onStart={startGame}
           />
         )}
 
-
         {phase === "reveal" && (
           <RevealScreen
             seen={seen}
+            names={playerNames.slice(0, playerCount).map((_, i) => getName(i))}
             onPick={(i) => {
               setActivePlayer(i);
               setRevealed(false);
             }}
             allSeen={allSeen}
-            onProceed={() => setPhase("discussion")}
+            onProceed={() => setPhase("voting")}
           />
         )}
 
-        {phase === "discussion" && (
-          <DiscussionScreen
-            timeLeft={timeLeft}
-            onVote={() => setPhase("voting")}
-            onAddTime={() => setTimeLeft((t) => t + 30)}
+        {phase === "voting" && (
+          <VotingScreen
+            names={playerNames.slice(0, playerCount).map((_, i) => getName(i))}
+            onVote={(i) => { setVotedIdx(i); setPhase("result"); }}
           />
         )}
-
-        {phase === "voting" && <VotingScreen playerCount={playerCount} onVote={(i) => { setVotedIdx(i); setPhase("result"); }} />}
 
         {phase === "result" && votedIdx !== null && (
           <ResultScreen
-            votedIdx={votedIdx}
+            votedName={getName(votedIdx)}
             role={roles[votedIdx]}
             word={currentWord}
-            category={currentCategory}
             roundsPlayed={usedWords.length}
             totalWords={wordPool.length}
             onNextRound={nextRound}
@@ -206,7 +203,7 @@ function Game() {
         <DialogContent className="sm:max-w-md border-primary/30 bg-card">
           {activePlayer !== null && (
             <RevealModal
-              playerNum={activePlayer + 1}
+              playerName={getName(activePlayer)}
               role={roles[activePlayer]}
               word={currentWord}
               revealed={revealed}
@@ -223,10 +220,12 @@ function Game() {
 function SetupScreen(props: {
   playerCount: number;
   setPlayerCount: (n: number) => void;
+  playerNames: string[];
+  setPlayerNames: (names: string[]) => void;
   onStart: () => void;
 }) {
   return (
-    <Card className="p-6 sm:p-8 bg-card/80 backdrop-blur border-primary/20 animate-pop space-y-8">
+    <Card className="p-6 sm:p-8 bg-card/80 backdrop-blur border-primary/20 animate-pop space-y-6">
       <div className="flex items-center gap-2">
         <Sparkles className="h-5 w-5 text-primary" />
         <h2 className="text-xl sm:text-2xl font-semibold">Imposter</h2>
@@ -256,6 +255,22 @@ function SetupScreen(props: {
         </div>
       </div>
 
+      <div className="grid sm:grid-cols-2 gap-3">
+        {Array.from({ length: props.playerCount }, (_, i) => (
+          <Input
+            key={i}
+            placeholder={`Speler ${i + 1}`}
+            value={props.playerNames[i] ?? ""}
+            onChange={(e) => {
+              const next = [...props.playerNames];
+              next[i] = e.target.value;
+              props.setPlayerNames(next);
+            }}
+            className="bg-input/50 border-primary/30 focus-visible:ring-primary"
+          />
+        ))}
+      </div>
+
       <Button
         onClick={props.onStart}
         className="w-full h-14 text-lg font-bold bg-gradient-primary text-primary-foreground hover:opacity-90 transition-opacity glow-cyan"
@@ -268,6 +283,7 @@ function SetupScreen(props: {
 
 function RevealScreen(props: {
   seen: boolean[];
+  names: string[];
   onPick: (i: number) => void;
   allSeen: boolean;
   onProceed: () => void;
@@ -276,32 +292,32 @@ function RevealScreen(props: {
     <div className="space-y-6 animate-pop">
       <div className="text-center">
         <h2 className="text-2xl font-semibold flex items-center justify-center gap-2">
-          <Users className="h-6 w-6 text-primary" /> Pass the device
+          <Users className="h-6 w-6 text-primary" /> Geef het toestel door
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Each player taps their card privately.
+          Elke speler tikt op zijn kaart.
         </p>
       </div>
       <div className="grid grid-cols-2 gap-4">
-        {props.seen.map((_, i) => (
+        {props.seen.map((done, i) => (
           <button
             key={i}
-            onClick={() => !props.seen[i] && props.onPick(i)}
-            disabled={props.seen[i]}
+            onClick={() => !done && props.onPick(i)}
+            disabled={done}
             className={`group relative min-h-[110px] rounded-2xl border-2 p-4 flex flex-col items-center justify-center transition-all ${
-              props.seen[i]
+              done
                 ? "border-primary/30 bg-muted/40 cursor-not-allowed"
                 : "border-primary/40 bg-card active:scale-[0.97] sm:hover:border-primary sm:hover:glow-cyan"
             }`}
           >
-            {props.seen[i] ? (
+            {done ? (
               <EyeOff className="h-8 w-8 text-muted-foreground mb-2" />
             ) : (
               <Eye className="h-8 w-8 text-primary mb-2 group-hover:scale-110 transition-transform" />
             )}
-            <span className="text-lg sm:text-xl font-bold">Player {i + 1}</span>
+            <span className="text-base sm:text-lg font-bold text-center break-words w-full">{props.names[i]}</span>
             <span className="text-xs mt-1 text-muted-foreground">
-              {props.seen[i] ? "Seen ✓" : "Tap to reveal"}
+              {done ? "Gezien ✓" : "Tik om te zien"}
             </span>
           </button>
         ))}
@@ -311,7 +327,7 @@ function RevealScreen(props: {
           onClick={props.onProceed}
           className="w-full h-14 text-lg font-bold bg-gradient-primary text-primary-foreground glow-pink animate-pop"
         >
-          Proceed to Discussion →
+          <Vote className="h-5 w-5 mr-2" /> Ga naar stemmen →
         </Button>
       )}
     </div>
@@ -319,7 +335,7 @@ function RevealScreen(props: {
 }
 
 function RevealModal(props: {
-  playerNum: number;
+  playerName: string;
   role: Role;
   word: string;
   revealed: boolean;
@@ -331,12 +347,12 @@ function RevealModal(props: {
     <>
       <DialogHeader>
         <DialogTitle className="text-2xl text-center">
-          Player {props.playerNum}
+          {props.playerName}
         </DialogTitle>
         <DialogDescription className="text-center">
           {props.revealed
-            ? "Memorise this and hide the screen."
-            : `Are you Player ${props.playerNum}? Tap to reveal.`}
+            ? "Onthoud dit en verberg het scherm."
+            : `Ben jij ${props.playerName}? Tik om te onthullen.`}
         </DialogDescription>
       </DialogHeader>
       <div className="py-6 flex flex-col items-center gap-4">
@@ -345,7 +361,7 @@ function RevealModal(props: {
             onClick={props.onReveal}
             className="w-full h-32 rounded-xl bg-gradient-primary text-primary-foreground font-bold text-xl glow-cyan active:scale-[0.98] transition-transform"
           >
-            👁  Tap to Reveal
+            👁  Tik om te onthullen
           </button>
         ) : (
           <div className="w-full animate-flip-in">
@@ -353,16 +369,16 @@ function RevealModal(props: {
               <div className="w-full min-h-32 rounded-xl border-2 border-accent bg-card flex flex-col items-center justify-center p-6 glow-pink gap-2">
                 <ShieldAlert className="h-10 w-10 text-accent" />
                 <span className="text-2xl sm:text-4xl font-black text-accent text-glow-pink text-center">
-                  You are the Imposter
+                  Jij bent de Imposter
                 </span>
                 <span className="text-xs text-muted-foreground text-center">
-                  You don't get a word. Bluff your way through!
+                  Je krijgt geen woord. Bluf je er doorheen!
                 </span>
               </div>
             ) : (
               <div className="w-full min-h-32 rounded-xl border-2 border-primary bg-card flex flex-col items-center justify-center p-6 glow-cyan gap-2">
                 <span className="text-xs uppercase tracking-widest text-muted-foreground">
-                  Your secret word
+                  Jouw geheime woord
                 </span>
                 <span className="text-3xl sm:text-4xl font-black text-primary text-glow-cyan break-all text-center">
                   {props.word}
@@ -373,7 +389,7 @@ function RevealModal(props: {
               onClick={props.onClose}
               className="w-full mt-4 bg-secondary hover:bg-secondary/80"
             >
-              Close (auto in 3s)
+              Sluiten
             </Button>
           </div>
         )}
@@ -382,69 +398,26 @@ function RevealModal(props: {
   );
 }
 
-function DiscussionScreen(props: {
-  timeLeft: number;
-  onVote: () => void;
-  onAddTime: () => void;
-}) {
-  const mins = Math.floor(props.timeLeft / 60);
-  const secs = props.timeLeft % 60;
-  const pct = Math.min(100, (props.timeLeft / 120) * 100);
-  const urgent = props.timeLeft <= 15;
-  return (
-    <Card className="p-6 sm:p-10 bg-card/80 backdrop-blur border-primary/20 animate-pop text-center">
-      <div className="flex items-center justify-center gap-2 mb-4">
-        <Timer className={`h-6 w-6 ${urgent ? "text-destructive" : "text-primary"}`} />
-        <h2 className="text-xl font-semibold">Discussion Round</h2>
-      </div>
-      <p className="text-sm text-muted-foreground mb-6">
-        Describe your word without saying it. Find the imposter!
-      </p>
-      <div
-        className={`text-6xl sm:text-8xl font-black tabular-nums my-6 ${
-          urgent ? "text-destructive animate-pulse" : "text-primary text-glow-cyan"
-        }`}
-      >
-        {mins}:{secs.toString().padStart(2, "0")}
-      </div>
-      <div className="w-full h-2 bg-muted rounded-full overflow-hidden mb-8">
-        <div
-          className={`h-full transition-all duration-1000 ${urgent ? "bg-destructive" : "bg-gradient-primary"}`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <div className="flex flex-col sm:flex-row gap-3">
-        <Button variant="outline" onClick={props.onAddTime} className="flex-1 border-primary/40">
-          +30 seconds
-        </Button>
-        <Button onClick={props.onVote} className="flex-1 h-12 bg-gradient-primary text-primary-foreground font-bold glow-pink">
-          <Vote className="h-5 w-5 mr-2" /> Go to Vote
-        </Button>
-      </div>
-    </Card>
-  );
-}
-
-function VotingScreen(props: { playerCount: number; onVote: (i: number) => void }) {
+function VotingScreen(props: { names: string[]; onVote: (i: number) => void }) {
   return (
     <div className="space-y-6 animate-pop">
       <div className="text-center">
         <h2 className="text-2xl font-semibold flex items-center justify-center gap-2">
-          <Vote className="h-6 w-6 text-accent" /> Cast Your Vote
+          <Vote className="h-6 w-6 text-accent" /> Stem
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">Who is the imposter?</p>
+        <p className="text-sm text-muted-foreground mt-1">Wie is de imposter?</p>
       </div>
       <div className="grid sm:grid-cols-2 gap-4">
-        {Array.from({ length: props.playerCount }, (_, i) => (
+        {props.names.map((name, i) => (
           <Card key={i} className="p-5 bg-card border-accent/20 flex items-center justify-between hover:border-accent/60 transition-colors">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-gradient-primary flex items-center justify-center font-black text-primary-foreground">
+              <div className="h-12 w-12 rounded-full bg-gradient-primary flex items-center justify-center font-black text-primary-foreground shrink-0">
                 {i + 1}
               </div>
-              <span className="font-semibold text-lg">Player {i + 1}</span>
+              <span className="font-semibold text-lg break-words">{name}</span>
             </div>
-            <Button onClick={() => props.onVote(i)} variant="destructive" className="font-bold">
-              Vote Out
+            <Button onClick={() => props.onVote(i)} variant="destructive" className="font-bold shrink-0 ml-2">
+              Vote
             </Button>
           </Card>
         ))}
@@ -454,45 +427,44 @@ function VotingScreen(props: { playerCount: number; onVote: (i: number) => void 
 }
 
 function ResultScreen(props: {
-  votedIdx: number;
+  votedName: string;
   role: Role;
   word: string;
-  category: string;
   roundsPlayed: number;
   totalWords: number;
   onNextRound: () => void;
   onFullReset: () => void;
 }) {
   const wasImposter = props.role === "imposter";
-  const winner = wasImposter ? "Citizens Win!" : "Imposter Wins!";
+  const winner = wasImposter ? "Burgers winnen!" : "Imposter wint!";
   return (
     <Card
       className={`p-8 sm:p-12 bg-card/80 backdrop-blur text-center animate-pop ${
         wasImposter ? "border-primary glow-cyan" : "border-accent glow-pink"
       }`}
     >
-      <p className="text-sm uppercase tracking-widest text-muted-foreground mb-2">The verdict</p>
+      <p className="text-sm uppercase tracking-widest text-muted-foreground mb-2">Het verdict</p>
       <h2 className="text-3xl sm:text-4xl font-black mb-4">
-        Player {props.votedIdx + 1} was{" "}
+        {props.votedName} was{" "}
         <span className={wasImposter ? "text-accent text-glow-pink" : "text-primary text-glow-cyan"}>
-          {wasImposter ? "The Imposter" : "A Citizen"}!
+          {wasImposter ? "de Imposter" : "een Burger"}!
         </span>
       </h2>
       <div className={`text-5xl sm:text-6xl font-black my-6 ${wasImposter ? "text-primary text-glow-cyan" : "text-accent text-glow-pink"}`}>
         {winner}
       </div>
       <p className="text-muted-foreground mb-1">
-        The secret word was <span className="font-bold text-foreground">{props.word}</span>
+        Het geheime woord was <span className="font-bold text-foreground">{props.word}</span>
       </p>
       <p className="text-xs text-muted-foreground mb-8">
-        {props.category} · Round {props.roundsPlayed} of {props.totalWords}
+        Ronde {props.roundsPlayed} van {props.totalWords}
       </p>
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         <Button onClick={props.onNextRound} className="h-14 px-8 text-lg font-bold bg-gradient-primary text-primary-foreground glow-cyan">
-          <Sparkles className="h-5 w-5 mr-2" /> Next Round
+          <Sparkles className="h-5 w-5 mr-2" /> Volgende ronde
         </Button>
         <Button onClick={props.onFullReset} variant="outline" className="h-14 px-8 text-lg font-bold border-primary/40">
-          <RotateCcw className="h-5 w-5 mr-2" /> Andere categorie
+          <RotateCcw className="h-5 w-5 mr-2" /> Opnieuw
         </Button>
       </div>
     </Card>
